@@ -1,0 +1,12 @@
+{application, noise_erlang,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { noise_erlang_app, []}},
+  {env, []}
+ ]}.
