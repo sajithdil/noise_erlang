@@ -154,4 +154,25 @@ handle_call({simplex2, Xin, Yin, Zin}, State) ->
                  T33 * T33 * noise_erlang_util:dot2(Gi3,X3, Y3, Z3)
         end,
     70 * (N0 + N1 + N2 + N3).
+
+handle_call({perlin2, Xin, Yin}, State) ->
+    X2 = noise_erlang_util:floor(Xin),
+    Y2 = noise_erlang_util:floor(Yin),
     
+    X3 = Xin - X2,
+    Y3 = Yin - Y2,
+    
+    X4 = Xin + 255,
+    Y4 = Yin + 255,
+    
+    N00 = noise_erlang_util:dot2(lists:nth(X2 + lists:nth(Y2, State#state.perm),State#state.gradP),X4,Y4),
+    N01 = noise_erlang_util:dot2(lists:nth(X2 + lists:nth(Y2 +1, State#state.perm),State#state.gradP),X4,Y4 -1),
+    N10 = noise_erlang_util:dot2(lists:nth(X2 + 1 + lists:nth(Y2, State#state.perm),State#state.gradP),X4 -1,Y4),
+    N11 = noise_erlang_util:dot2(lists:nth(X2 + 1 + lists:nth(Y2 + 1, State#state.perm),State#state.gradP),X4 -1,Y4 -1),
+    
+    U = noise_erlang_util:fade(X4),
+    
+    noise_erlang_util:lerp(    
+        noise_erlang_util:lerp(N00, N10, U),
+        noise_erlang_util:lerp(N01, N11, U),
+       noise_erlang_util:fade(y)).
