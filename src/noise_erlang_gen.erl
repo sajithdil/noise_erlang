@@ -176,3 +176,38 @@ handle_call({perlin2, Xin, Yin}, State) ->
         noise_erlang_util:lerp(N00, N10, U),
         noise_erlang_util:lerp(N01, N11, U),
        noise_erlang_util:fade(y)).
+
+handle_call({perlin2, Xin, Yin, Zin}, State) ->
+    X2 = noise_erlang_util:floor(Xin),
+    Y2 = noise_erlang_util:floor(Yin),
+    Z2 = noise_erlang_util:floor(Zin),
+    
+    X3 = Xin - X2,
+    Y3 = Yin - Y2,
+    Z3 = Zin - Z2,
+    
+    X4 = Xin + 255,
+    Y4 = Yin + 255,
+    YZ = Zin + 255,
+    
+    N000 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4,Y4,Z4),
+    N001 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4,Y4,Z4 -1),
+    N010 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + 1 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4,Y4 -1,Z4),
+    N011 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + 1 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4,Y4 -1,Z4 -1),
+    N100 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4,Z4),
+    N101 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4,Z4 -1),
+    N110 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + 1 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4 -1,Z4),
+    N111 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + 1 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4 -1,Z4 -1),
+    
+    U = noise_erlang_util:fade(X4),
+    V = noise_erlang_util:fade(Y4),
+    W = noise_erlang_util:fade(Z4),
+    
+    noise_erlang_util:lerp(
+        noise_erlang_util:lerp(
+          noise_erlang_util:lerp(N000, N100, U),
+          noise_erlang_util:lerp(N001, N101, U), W),
+        noise_erlang_util:lerp(
+          noise_erlang_util:lerp(N010, N110, U),
+          noise_erlang_util:lerp(N011, N111, U), W),
+       V).
