@@ -2,15 +2,15 @@
 
 -include("noise_erlang.hrl").
 
-export([]).
+export([seed/2, fade/1, lerp/3, floor/1, dot2/3, dot3/4]).
 
-seed(seedValue, State) -> 
+seed(SeedValue, State) -> 
     NewValue = if
-        (seedValue > 0 andalso seedValue < 1) ->
+        (SeedValue > 0 andalso SeedValue < 1) ->
             %%Scale the seed out
-            seedValue * 65536;
+            SeedValue * 65536;
         true ->
-            seedValue
+            SeedValue
         end,
     NewValue2 = floor(NewValue),
     NewValue3 = if
@@ -35,7 +35,7 @@ seed_loop(State, Seed, Count) ->
             end,
     NewState = State#state{
                            perm = lists:concat(State#state.perm, Value),
-                           gradP = lists:concat(State#state.perm, lists:nth(v rem 12, ?grad3))
+                           gradP = lists:concat(State#state.gradP, lists:nth(v rem 12, ?grad3))
                           },
     seed_loop(NewState, Seed, Count +1).
 
@@ -54,3 +54,13 @@ ceiling(X) ->
         Pos when Pos > 0 -> T + 1;
         _ -> T
     end.
+
+fade(t) ->
+    t*t*t*(t*(t*6-15)+10).
+lerp(a,b,t) ->
+    (1-t)*a + t*b.
+
+dot2(#grad{x = X, y = Y, z = Z}, X0 , Y0) ->
+    X * X0 + Y * Y0.
+dot3(#grad{x = X, y = Y, z = Z}, X0 , Y0, Z0) ->
+    X * X0 + Y * Y0 + Z * Z0.
