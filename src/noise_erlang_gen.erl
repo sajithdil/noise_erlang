@@ -4,16 +4,14 @@
 
 -behaviour(gen_server).
 
--export([]).
+-export([handle_call/3, code_change/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--record(state,  {perm, gradP, f2, g2, f3, g3}).
-
-init(Arg) ->
+init(_Arg) ->
     State = #state{perm = [], gradP = [], f2 = 0.5*(math:sqrt(3)-1), g2 = (3-math:sqrt(3))/6, f3 = 1/3, g3 = 1/6},
     NewState = noise_erlang_gen:seed(0, State),
     {ok, NewState}.
 
-handle_call({simplex2, Xin, Yin}, State) ->
+handle_call({simplex2, Xin, Yin}, _From, State) ->
     S = (Xin+Yin)*State#state.f2,
     I = noise_erlang_util:floor(Xin + S),
     J = noise_erlang_util:floor(Yin + S),
@@ -69,9 +67,10 @@ handle_call({simplex2, Xin, Yin}, State) ->
                  T22 = T2 * T2,
                  T22 * T22 * noise_erlang_util:dot2(Gi2,X2, Y2)
         end,
-    70 * (N0 + N1 + N2).
+    NoiseValue = 70 * (N0 + N1 + N2),
+	{reply, NoiseValue, State};
 
-handle_call({simplex2, Xin, Yin, Zin}, State) ->
+handle_call({simplex3, Xin, Yin, Zin}, _From, State) ->
     S = (Xin+Yin+Zin)*State#state.f2,
     I = noise_erlang_util:floor(Xin + S),
     J = noise_erlang_util:floor(Yin + S),
@@ -98,7 +97,7 @@ handle_call({simplex2, Xin, Yin, Zin}, State) ->
                                                { 0, 1, 0, 0, 1, 1 };
                                             true ->
                                                { 0, 1, 0, 1, 1, 0 }
-                                        end;
+                                        end
                                 end,
     X1 = X0 - I1 + State#state.g3,
     Y1 = Y0 - J1 + State#state.g3,
@@ -153,31 +152,33 @@ handle_call({simplex2, Xin, Yin, Zin}, State) ->
                  T33 = T3 * T3,
                  T33 * T33 * noise_erlang_util:dot2(Gi3,X3, Y3, Z3)
         end,
-    70 * (N0 + N1 + N2 + N3).
+    NoiseValue = 70 * (N0 + N1 + N2 + N3),
+	{reply, NoiseValue, State};
 
-handle_call({perlin2, Xin, Yin}, State) ->
+handle_call({perlin2, Xin, Yin}, _From, State) ->
     X2 = noise_erlang_util:floor(Xin),
     Y2 = noise_erlang_util:floor(Yin),
     
     X3 = Xin - X2,
     Y3 = Yin - Y2,
     
-    X4 = Xin + 255,
-    Y4 = Yin + 255,
+    X4 = X2 band 255,
+    Y4 = Y2 band 255,
     
-    N00 = noise_erlang_util:dot2(lists:nth(X2 + lists:nth(Y2, State#state.perm),State#state.gradP),X4,Y4),
-    N01 = noise_erlang_util:dot2(lists:nth(X2 + lists:nth(Y2 +1, State#state.perm),State#state.gradP),X4,Y4 -1),
-    N10 = noise_erlang_util:dot2(lists:nth(X2 + 1 + lists:nth(Y2, State#state.perm),State#state.gradP),X4 -1,Y4),
-    N11 = noise_erlang_util:dot2(lists:nth(X2 + 1 + lists:nth(Y2 + 1, State#state.perm),State#state.gradP),X4 -1,Y4 -1),
+    N00 = noise_erlang_util:dot2(lists:nth(X4  + lists:nth(Y4, State#state.perm),State#state.gradP),X3,Y3),
+    N01 = noise_erlang_util:dot2(lists:nth(X4 + lists:nth(Y4 +1, State#state.perm),State#state.gradP),X3,Y3 -1),
+    N10 = noise_erlang_util:dot2(lists:nth(X4 + 1 + lists:nth(Y4, State#state.perm),State#state.gradP),X3 -1,Y3),
+    N11 = noise_erlang_util:dot2(lists:nth(X4 + 1 + lists:nth(Y4 + 1, State#state.perm),State#state.gradP),X3 -1,Y3 -1),
     
-    U = noise_erlang_util:fade(X4),
+    U = noise_erlang_util:fade(X3),
     
-    noise_erlang_util:lerp(    
+    NoiseValue = noise_erlang_util:lerp(    
         noise_erlang_util:lerp(N00, N10, U),
         noise_erlang_util:lerp(N01, N11, U),
-       noise_erlang_util:fade(y)).
+       noise_erlang_util:fade(Y3)),
+	   {reply, NoiseValue, State};
 
-handle_call({perlin2, Xin, Yin, Zin}, State) ->
+handle_call({perlin3, Xin, Yin, Zin}, _From, State) ->
     X2 = noise_erlang_util:floor(Xin),
     Y2 = noise_erlang_util:floor(Yin),
     Z2 = noise_erlang_util:floor(Zin),
@@ -186,28 +187,41 @@ handle_call({perlin2, Xin, Yin, Zin}, State) ->
     Y3 = Yin - Y2,
     Z3 = Zin - Z2,
     
-    X4 = Xin + 255,
-    Y4 = Yin + 255,
-    YZ = Zin + 255,
+    X4 = X2 band 255,
+    Y4 = Y2 band 255,
+    Z4 = Z2 band 255,
     
-    N000 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4,Y4,Z4),
-    N001 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4,Y4,Z4 -1),
-    N010 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + 1 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4,Y4 -1,Z4),
-    N011 = noise_erlang_util:dot3(lists:nth(X2 + lists:nth(Y2 + 1 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4,Y4 -1,Z4 -1),
-    N100 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4,Z4),
-    N101 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4,Z4 -1),
-    N110 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + 1 + lists:nth(Z2, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4 -1,Z4),
-    N111 = noise_erlang_util:dot3(lists:nth(X2 + 1 + lists:nth(Y2 + 1 + lists:nth(Z2 + 1, State#state.perm), State#state.perm),State#state.gradP),X4 -1,Y4 -1,Z4 -1),
+    N000 = noise_erlang_util:dot3(lists:nth(X4 + lists:nth(Y4 + lists:nth(Z4, State#state.perm), State#state.perm),State#state.gradP),X3,Y3,Z3),
+    N001 = noise_erlang_util:dot3(lists:nth(X4 + lists:nth(Y4 + lists:nth(Z4 + 1, State#state.perm), State#state.perm),State#state.gradP),X3,Y3,Z3 -1),
+    N010 = noise_erlang_util:dot3(lists:nth(X4 + lists:nth(Y4 + 1 + lists:nth(Z4, State#state.perm), State#state.perm),State#state.gradP),X3,Y3 -1,Z3),
+    N011 = noise_erlang_util:dot3(lists:nth(X4 + lists:nth(Y4 + 1 + lists:nth(Z4 + 1, State#state.perm), State#state.perm),State#state.gradP),X3,Y3 -1,Z3 -1),
+    N100 = noise_erlang_util:dot3(lists:nth(X4 + 1 + lists:nth(Y4 + lists:nth(Z4, State#state.perm), State#state.perm),State#state.gradP),X3 -1,Y3,Z3),
+    N101 = noise_erlang_util:dot3(lists:nth(X4 + 1 + lists:nth(Y4 + lists:nth(Z4 + 1, State#state.perm), State#state.perm),State#state.gradP),X3 -1,Y3,Z3 -1),
+    N110 = noise_erlang_util:dot3(lists:nth(X4 + 1 + lists:nth(Y4 + 1 + lists:nth(Z4, State#state.perm), State#state.perm),State#state.gradP),X3 -1,Y3 -1,Z3),
+    N111 = noise_erlang_util:dot3(lists:nth(X4 + 1 + lists:nth(Y4 + 1 + lists:nth(Z4 + 1, State#state.perm), State#state.perm),State#state.gradP),X3 -1,Y3 -1,Z3 -1),
     
-    U = noise_erlang_util:fade(X4),
-    V = noise_erlang_util:fade(Y4),
-    W = noise_erlang_util:fade(Z4),
+    U = noise_erlang_util:fade(X3),
+    V = noise_erlang_util:fade(Y3),
+    W = noise_erlang_util:fade(Z3),
     
-    noise_erlang_util:lerp(
+    NoiseValue = noise_erlang_util:lerp(
         noise_erlang_util:lerp(
           noise_erlang_util:lerp(N000, N100, U),
           noise_erlang_util:lerp(N001, N101, U), W),
         noise_erlang_util:lerp(
           noise_erlang_util:lerp(N010, N110, U),
           noise_erlang_util:lerp(N011, N111, U), W),
-       V).
+       V),
+	   {reply, NoiseValue, State}.
+
+handle_cast(_Request,State) ->
+{reply,{},State}.
+
+handle_info(_Request, State) ->
+{reply, {}, State}.
+
+code_change(_OldVsn, State, _Extra)->
+{ok, State}.
+
+terminate(Reason, _State)->
+{ok, Reason}.
