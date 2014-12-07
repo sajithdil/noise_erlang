@@ -8,8 +8,7 @@ still testing
 
 will update the readme once testing is complete
 
-*remember erlang is 1 based, so cannpot start with 0,0 ,so when syncing with te javascript lib, offset the 0 base to 1 base
-
+lib can be used zero based, like the js lib
 
 UPDATE:
 
