@@ -44,3 +44,9 @@ gen_server:call({global,noise_erlang_gen},{simplex3, 0, 0, 0}).
 gen_server:call({global,noise_erlang_gen},{simplex3, 1, 1, 1}).
 gen_server:call({global,noise_erlang_gen},{simplex3, 1, 1, 1.01}).
 gen_server:call({global,noise_erlang_gen},{simplex3, 27, 27, 1.01}).
+
+WUPDATE 3:
+
+Testing complete
+
+lib sycable with javascript lib: https://github.com/sajithdil/noisejs
